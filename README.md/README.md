@@ -1,3 +1,4 @@
+Set-Content -Path README.md -Value @"
 # 🛍️ Fluxo de Loja Construido 06/10/2025
 
 Sistema interno de gestão para lojas, desenvolvido com **Python + Streamlit**.  
@@ -18,7 +19,7 @@ Ideal para controle de atendimento e integração com planilhas (Google Sheets).
 
 ## 🚀 Como rodar localmente
 
-Local URL: http://localhost:8501
+Local URL: http://localhost:8501  
 Network URL: http://10.0.0.163:8501
 
 ### 1. Clone o repositório
@@ -26,4 +27,3 @@ Network URL: http://10.0.0.163:8501
 ```bash
 git clone https://github.com/CelioCruz/fluxo_de_loja_grupo_sales.git
 cd fluxo-de-loja-grupo-sales
-site https://fluxo-de-loja-grupo-sales.onrender.com/
