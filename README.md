@@ -26,4 +26,4 @@ Network URL: http://10.0.0.163:8501
 
 ```bash
 git clone https://github.com/CelioCruz/fluxo_de_loja_grupo_sales.git
-cd fluxo-de-loja-grupo-sales
+cd fluxo_de_loja_grupo_sales
