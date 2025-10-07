@@ -1,22 +1,27 @@
-# Ambiente virtual
+# Ambientes virtuais
 cruz.dev_venv/
-env/
+venv/
+.env/
 
 # Cache Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Arquivos temporários
+# Arquivos do sistema
 .DS_Store
 Thumbs.db
 *.log
 *.tmp
+*~
+.swp
 
-# Streamlit (ignorar apenas o arquivo secreto, não a pasta inteira)
-.secrets.toml
+# Streamlit - apenas o arquivo de segredos (não a pasta inteira)
+.streamlit/secrets.toml
 
-
-# Secrets (não subir arquivos sensíveis)
-usuarios.json
-secrets.toml
+# Arquivos sensíveis
 credenciais.json
+usuarios.json
+*.key
+*.pem
