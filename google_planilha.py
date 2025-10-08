@@ -1,9 +1,11 @@
 import gspread
 from gspread.exceptions import APIError, SpreadsheetNotFound, WorksheetNotFound
+from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2 import service_account
 from typing import Dict, List, Optional
 import streamlit as st
+import os
 import json
 import pandas as pd
 from io import BytesIO
@@ -18,47 +20,68 @@ BACKUP_AGE_DAYS = 3 * 365.25  # 3 anos
 CLEANUP_BACKUP_OLDER_THAN_DAYS = 5 * 365.25  # 5 anos
 DEFAULT_TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
-# ✅ Escopos corretos (sem espaços!)
+# ✅ Escopos CORRETOS — SEM ESPAÇOS!
 SCOPES_SHEETS = [
     'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive.readonly' 
+    'https://www.googleapis.com/auth/drive.readonly'
 ]
 SCOPES_DRIVE = [
     'https://www.googleapis.com/auth/drive'
 ]
 
 
+def _get_credentials():
+    """Obtém credenciais de variáveis de ambiente (Render) ou st.secrets (local)."""
+    if 'GCP_PROJECT_ID' in os.environ:
+        # Render: usa variáveis de ambiente
+        return {
+            "type": "service_account",
+            "project_id": os.environ["GCP_PROJECT_ID"],
+            "private_key_id": os.environ["GCP_PRIVATE_KEY_ID"],
+            "private_key": os.environ["GCP_PRIVATE_KEY"].replace("\\n", "\n"),
+            "client_email": os.environ["GCP_CLIENT_EMAIL"],
+            "client_id": os.environ["GCP_CLIENT_ID"],
+            "client_x509_cert_url": os.environ["GCP_CLIENT_X509_CERT_URL"],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": os.environ["GCP_CLIENT_X509_CERT_URL"]
+            
+        }
+    else:
+        # Local: usa secrets.toml
+        return st.secrets["gcp_service_account"]
+
+
 class GooglePlanilha:
     """
     Classe para integração com Google Sheets e Drive.
+    Funciona tanto localmente quanto no Render.
     """
 
     def __init__(self):
         """Inicializa a conexão com o Google Sheets."""
-        # Sempre cria o cliente diretamente
+        self.credentials_dict = _get_credentials()
         self.client = self._criar_conexao()
         
         try:
             self.planilha = self.client.open(SPREADSHEET_NAME)
         except SpreadsheetNotFound:
-            st.error("❌ Planilha 'cruz.dev_fluxo' não encontrada.")
-            st.markdown("💡 Compartilhe com: `projeto040925@projeto-040925.iam.gserviceaccount.com` como **Editor**.")
+            st.error("❌ Planilha 'fluxo de loja' não encontrada.")
+            st.markdown(f"💡 Compartilhe com: `{self.credentials_dict['client_email']}` como **Editor**.")
             st.stop()
 
-        # Abas principais
+        # Abas principais — NOMES EXATOS DA SUA PLANILHA
         self.aba_vendedores = self._get_worksheet("ab_vendedor")
         self.aba_dados = self._get_worksheet("ab_dados")
-        self.aba_lentes = self._get_worksheet("tb_preco")
 
-        # Verifica estrutura
+        # Verifica estrutura e configuração
         self._verificar_estrutura()
         self._criar_aba_config()
 
     def _criar_conexao(self):
         try:
-            credenciais = st.secrets["gcp_service_account"]
-            # ✅ Usa gspread com escopos modernos
-            client = gspread.service_account_from_dict(credenciais, scopes=SCOPES_SHEETS)
+            client = gspread.service_account_from_dict(self.credentials_dict, scopes=SCOPES_SHEETS)
             return client
         except Exception as e:
             st.error(f"❌ Falha ao conectar ao Google Sheets: {e}")
@@ -74,17 +97,27 @@ class GooglePlanilha:
 
     def _verificar_estrutura(self):
         """Verifica cabeçalhos da aba 'ab_dados'."""
-        if not self.aba_dados:
+        if self.aba_dados is None:
+            st.warning("⚠️ Aba 'ab_dados' não disponível. Não foi possível verificar a estrutura.")
             return
+
         try:
-            cabecalhos = [c.strip() for c in self.aba_dados.row_values(1)]
+            cabecalhos = [str(c).strip() for c in self.aba_dados.row_values(1)]
             esperados = [
                 'LOJA', 'DATA', 'HORA', 'VENDEDOR', 'CLIENTE', 'ATENDIMENTO', 'RECEITA',
-                'PERDA', 'VENDA', 'RESERVA', 'PESQUISA', 'EXAME DE VISTA', 'GAR_LENTE', 'GAR_ARMACAO', 'AJUSTE',
-                'ENTREGA',
+                'PERDA', 'VENDA', 'RESERVA', 'PESQUISA', 'EXAME DE VISTA', 'GAR_LENTE',
+                'GAR_ARMACAO', 'AJUSTE', 'ENTREGA'
             ]
-            if len(cabecalhos) < 16 or cabecalhos[:16] != esperados:
+
+            if len(cabecalhos) < len(esperados):
+                st.warning(f"⚠️ Número insuficiente de colunas. Esperado: {len(esperados)}, Encontrado: {len(cabecalhos)}")
+                return
+
+            if cabecalhos[:len(esperados)] != esperados:
                 st.warning("⚠️ Estrutura da aba 'ab_dados' incorreta.")
+            else:
+                st.success("✅ Estrutura da aba 'ab_dados' validada.")
+
         except Exception as e:
             st.error(f"❌ Erro ao verificar estrutura: {e}")
 
@@ -130,7 +163,7 @@ class GooglePlanilha:
                 st.info("📭 Nenhum dado para backup.")
                 return
 
-            nome_arquivo = f"backup_dados_{datetime.now().strftime('%Y-%m-%d')}.csv"
+            nome_arquivo = f"backup_ab_dados_{datetime.now().strftime('%Y-%m-%d')}.csv"
             csv = df.to_csv(index=False)
 
             self._salvar_no_drive(nome_arquivo, csv)
@@ -143,9 +176,8 @@ class GooglePlanilha:
 
     def _salvar_no_drive(self, nome_arquivo: str, conteudo: str):
         try:
-            info = st.secrets["gcp_service_account"]
             credentials = service_account.Credentials.from_service_account_info(
-                info,
+                self.credentials_dict,
                 scopes=SCOPES_DRIVE
             )
             service = build("drive", "v3", credentials=credentials)
@@ -160,6 +192,8 @@ class GooglePlanilha:
 
     def _limpar_aba_dados(self):
         try:
+            if self.aba_dados is None:
+                return
             cabecalhos = self.aba_dados.row_values(1)
             self.aba_dados.clear()
             self.aba_dados.update("A1", [cabecalhos])
@@ -169,20 +203,19 @@ class GooglePlanilha:
 
     def _limpar_backups_antigos_no_drive(self):
         try:
-            info = st.secrets["gcp_service_account"]
             credentials = service_account.Credentials.from_service_account_info(
-                info,
+                self.credentials_dict,
                 scopes=SCOPES_DRIVE
             )
             service = build("drive", "v3", credentials=credentials)
 
-            query = "mimeType='text/csv' and trashed=false and name contains 'backup_dados_'"
+            query = "mimeType='text/csv' and trashed=false and name contains 'backup_ab_dados_'"
             results = service.files().list(q=query, fields="files(id, name)").execute()
             files = results.get("files", [])
 
             agora = datetime.now()
             for file in files:
-                match = re.search(r"backup_dados_(\d{4}-\d{2}-\d{2})\.csv", file["name"])
+                match = re.search(r"backup_ab_dados_(\d{4}-\d{2}-\d{2})\.csv", file["name"])
                 if match:
                     data_arquivo = datetime.strptime(match.group(1), "%Y-%m-%d")
                     if (agora - data_arquivo).days > CLEANUP_BACKUP_OLDER_THAN_DAYS:
@@ -226,8 +259,8 @@ class GooglePlanilha:
                 ('vendedor', 'VENDEDOR'), ('cliente', 'CLIENTE'),
                 ('atendimento', 'ATENDIMENTO'), ('receita', 'RECEITA'),
                 ('perda', 'PERDA'), ('venda', 'VENDA'), ('reserva', 'RESERVA'),
-                ('pesquisa', 'PESQUISA'), ('consulta', 'EXAME DE VISTA'), ('GARANTIA''garantia','GARANTIA'),
-                ('ajuste', 'AJUSTE'), ('entrega', 'ENTREGA'), ('lente', 'LENTE'),
+                ('pesquisa', 'PESQUISA'), ('consulta', 'EXAME DE VISTA'), ('gar_lente', 'GAR_LENTE'),
+                ('gar_arma', 'GAR_ARMACAO'), ('ajuste', 'AJUSTE'), ('entrega', 'ENTREGA')
             ]
 
             valores = [str(dados.get(campo, '')).strip() for campo, _ in mapeamento]
