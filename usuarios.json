@@ -1,0 +1,24 @@
+{
+    "usuarios": [
+        {
+            "login": "IRECE",
+            "senha_hash": "$2b$12$cx28CPytcSn9MnlZuuQExO.ew321m/UkiARW31ciax/1MC7k0dvQW"
+        },
+        {
+            "login": "JUSCELIO",
+            "senha_hash": "$2b$12$xhU.NMWKbO8iPec6.lwzueylcRqsYztI7ebOxmf4ThmumPSc4S7qu"
+        },
+        {
+            "login": "MARCONE",
+            "senha_hash": "$2b$12$hxZlN2R52zmZHyEzioDnje4LKkQctLo.Jm9V1d7f.gXKLRY.ryXei"
+        },
+        {
+            "login": "JACOBINA",
+            "senha_hash": "$2b$12$mkbmNMzKzZVt6ySAd/7zlO1E2ua5rBPh4s4kJ/pxPI/.aly.5UIJm"
+        },
+        {
+            "login": "SEABRA",
+            "senha_hash": "$2b$12$sIXgLbl9BVj0BeqjNMbdb.Y.w4f3SMo21sKzJdC0mfFMvR7qEMBy6"
+        }
+    ]
+}

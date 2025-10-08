@@ -22,6 +22,5 @@ Thumbs.db
 
 # Arquivos sensíveis
 credenciais.json
-usuarios.json
 *.key
 *.pem
