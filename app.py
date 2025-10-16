@@ -146,7 +146,8 @@ modulos_subtelas = [
     'tl_exame',
     'tl_ajuste',
     'tl_entrega',
-    'tl_garantia',   
+    'tl_garantia',
+    'tl_relatorio_vendedor',   
 ]
 
 for nome_modulo in modulos_subtelas:

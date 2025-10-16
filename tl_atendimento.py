@@ -16,6 +16,7 @@ def tl_atendimento_principal():
         ("📦 Entrega de óculos", "entrega"),
         ("🛠️ Garantia", "garantia"),
         ("📅 Exame de Vista", "exame"),
+        ("📊 Relatório por Vendedor", "relatorio_vendedor"),
     ]
 
     # Exibe os botões em pares (2 por linha)
